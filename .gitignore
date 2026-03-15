@@ -1,0 +1,21 @@
+# Claude Code のローカル設定
+.claude/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+
+# チェック結果の出力ファイル（作業ファイルなのでコミット不要）
+*_result.csv
+file_list.csv
+file_list_batch.csv
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Excel 一時ファイル
+~$*
