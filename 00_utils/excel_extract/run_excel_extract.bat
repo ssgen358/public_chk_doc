@@ -43,7 +43,7 @@ SET CMD=%CMD% --header-row %HEADER_ROW%
 IF NOT "%START_ROW%"==""    SET CMD=%CMD% --start-row %START_ROW%
 IF NOT "%MAX_EMPTY%"==""    SET CMD=%CMD% --max-empty %MAX_EMPTY%
 IF NOT "%OUTPUT%"==""       SET CMD=%CMD% --output "%OUTPUT%"
-IF NOT "%NO_RECURSIVE%"=""  SET CMD=%CMD% %NO_RECURSIVE%
+IF NOT "%NO_RECURSIVE%"==""  SET CMD=%CMD% %NO_RECURSIVE%
 
 echo 実行コマンド: %CMD%
 echo.
