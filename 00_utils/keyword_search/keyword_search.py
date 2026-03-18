@@ -7,9 +7,16 @@ keyword_search.py - キーワード検索ツール
 テキスト系ファイル（.txt/.csv/.md 等）、Excel（.xlsx/.xls）、Word（.docx）に対応。
 
 【使い方】
-  python keyword_search.py <フォルダパス> <キーワード> [オプション]
+  単一フォルダ指定:
+    python keyword_search.py <フォルダパス> <キーワード> [オプション]
+
+  複数フォルダ指定（テキストファイル）:
+    python keyword_search.py <キーワード> --folders-file <テキストファイルパス> [オプション]
+
+  ※ テキストファイルは1行1フォルダパスで記載（空行・#始まり行はスキップ）
 
 【オプション】
+  --folders-file テキストファイルから対象フォルダを複数読み込む（1行1フォルダ）
   --ext          対象拡張子をカンマ区切りで指定（省略時: .txt,.csv,.md,.xlsx,.xls,.docx）
                  例: --ext .xlsx,.csv
   --filename     ファイル名フィルタ（ワイルドカード対応、省略時: 全ファイル）
@@ -31,10 +38,14 @@ keyword_search.py - キーワード検索ツール
   keyword_search_YYYYMMDD_HHMMSS.csv（タイムスタンプ付き）
 
 【使用例】
+  # 単一フォルダ
   python keyword_search.py C:/work/設計書 "ユーザーID"
   python keyword_search.py C:/work/設計書 "ユーザーID" --ext .xlsx,.docx
   python keyword_search.py C:/work/設計書 "エラー" --ignore-case --outdir C:/work/output
-  python keyword_search.py C:/work/設計書 "削除" --filename "IF*.xlsx" --no-recursive
+
+  # 複数フォルダ（テキストファイル指定）
+  python keyword_search.py "ユーザーID" --folders-file folders.txt
+  python keyword_search.py "エラー" --folders-file folders.txt --ext .xlsx --ignore-case
 """
 
 import argparse
@@ -223,12 +234,37 @@ def write_csv(records: list[dict], output_path: str, encoding: str = "cp932") ->
 # メイン
 # ---------------------------------------------------------------------------
 
+def load_folders_file(filepath: str) -> list[str]:
+    """フォルダリストファイルを読み込む。空行・#始まり行はスキップ。"""
+    folders = []
+    for enc in ("utf-8-sig", "utf-8", "cp932"):
+        try:
+            with open(filepath, encoding=enc, errors="strict") as f:
+                lines = f.readlines()
+            break
+        except (UnicodeDecodeError, LookupError):
+            continue
+    else:
+        print(f"[ERROR] フォルダリストファイルを読み込めませんでした: {filepath}", file=sys.stderr)
+        sys.exit(1)
+
+    for line in lines:
+        line = line.strip()
+        if not line or line.startswith("#"):
+            continue
+        folders.append(line)
+    return folders
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(
         description="フォルダ配下のファイルからキーワードを検索し、該当行・セルを一覧表示する"
     )
-    parser.add_argument("folder",  help="対象フォルダのパス")
+    parser.add_argument("folder", nargs="?", default="",
+                        help="対象フォルダのパス（--folders-file 指定時は省略可）")
     parser.add_argument("keyword", help="検索するキーワード")
+    parser.add_argument("--folders-file", default="",
+                        help="対象フォルダを列挙したテキストファイルのパス（1行1フォルダ）")
     parser.add_argument("--ext", default="",
                         help="対象拡張子をカンマ区切りで指定（例: .xlsx,.csv）。省略時はデフォルト拡張子を使用")
     parser.add_argument("--filename", default="",
@@ -244,9 +280,30 @@ def main() -> None:
 
     args = parser.parse_args()
 
+    # 対象フォルダリストの決定
+    if args.folders_file:
+        # テキストファイルから複数フォルダを読み込む
+        if not os.path.isfile(args.folders_file):
+            print(f"[ERROR] フォルダリストファイルが見つかりません: {args.folders_file}", file=sys.stderr)
+            sys.exit(1)
+        target_folders = load_folders_file(args.folders_file)
+        if not target_folders:
+            print(f"[ERROR] フォルダリストファイルに有効なフォルダが1件もありません: {args.folders_file}",
+                  file=sys.stderr)
+            sys.exit(1)
+    elif args.folder:
+        # 単一フォルダ指定（従来通り）
+        target_folders = [args.folder]
+    else:
+        print("[ERROR] 対象フォルダを指定してください（引数 or --folders-file）", file=sys.stderr)
+        parser.print_help()
+        sys.exit(1)
+
     # フォルダの存在確認
-    if not os.path.isdir(args.folder):
-        print(f"[ERROR] フォルダが見つかりません: {args.folder}", file=sys.stderr)
+    invalid = [f for f in target_folders if not os.path.isdir(f)]
+    if invalid:
+        for f in invalid:
+            print(f"[ERROR] フォルダが見つかりません: {f}", file=sys.stderr)
         sys.exit(1)
 
     # 拡張子セットの構築
@@ -266,7 +323,9 @@ def main() -> None:
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     output_path = os.path.join(outdir, f"keyword_search_{timestamp}.csv")
 
-    print(f"対象フォルダ   : {args.folder}")
+    print(f"対象フォルダ   : {len(target_folders)} 件")
+    for f in target_folders:
+        print(f"  {f}")
     print(f"キーワード     : {args.keyword}")
     print(f"拡張子フィルタ : {sorted(extensions)}")
     print(f"ファイル名     : {filename_pattern if filename_pattern else '（指定なし）'}")
@@ -275,15 +334,18 @@ def main() -> None:
     print(f"出力先         : {output_path}")
     print()
 
-    # ファイル収集
-    filepaths = collect_files(args.folder, extensions, filename_pattern, recursive)
-    if not filepaths:
+    # ファイル収集（全フォルダ分）
+    all_filepaths: list[str] = []
+    for folder in target_folders:
+        all_filepaths.extend(collect_files(folder, extensions, filename_pattern, recursive))
+
+    if not all_filepaths:
         print("対象ファイルが見つかりませんでした。")
         sys.exit(0)
 
     # 検索
     all_records: list[dict] = []
-    for filepath in filepaths:
+    for filepath in all_filepaths:
         hits = search_file(filepath, args.keyword, args.ignore_case)
         dirpath = os.path.dirname(filepath)
         filename = os.path.basename(filepath)
@@ -296,7 +358,7 @@ def main() -> None:
             })
 
     # 結果出力
-    print(f"検索ファイル数 : {len(filepaths)}")
+    print(f"検索ファイル数 : {len(all_filepaths)}")
     print(f"ヒット件数     : {len(all_records)}")
     print()
 

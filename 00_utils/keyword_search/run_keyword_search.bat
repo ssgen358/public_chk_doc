@@ -7,8 +7,24 @@ rem  keyword_search 実行バッチ
 rem  ★ 以下の SET 行を環境に合わせて変更してください
 rem ============================================================
 
-rem 対象フォルダ（検索するフォルダのパス）
-SET TARGET_FOLDER=C:\work\設計書
+rem --- フォルダ指定方法（どちらか一方を使用）---
+rem
+rem 【方法1】単一フォルダを直接指定
+rem   TARGET_FOLDER にパスを設定し、FOLDERS_FILE は空欄にする
+rem
+rem 【方法2】複数フォルダをテキストファイルで指定（推奨）
+rem   FOLDERS_FILE にテキストファイルのパスを設定し、TARGET_FOLDER は空欄にする
+rem   テキストファイルは1行1フォルダで記載。空行・#始まり行はスキップされる。
+rem
+rem ※ FOLDERS_FILE が設定されている場合は TARGET_FOLDER より優先される
+
+rem 単一フォルダ指定（方法1）
+SET TARGET_FOLDER=
+
+rem 複数フォルダリストファイル指定（方法2）
+SET FOLDERS_FILE=%~dp0folders.txt
+
+rem ============================================================
 
 rem 検索キーワード
 SET KEYWORD=ユーザーID
@@ -29,7 +45,14 @@ rem ============================================================
 
 SET SCRIPT_DIR=%~dp0
 
-SET CMD=python "%SCRIPT_DIR%keyword_search.py" "%TARGET_FOLDER%" "%KEYWORD%"
+rem キーワードと基本オプションを組み立て
+IF NOT "%FOLDERS_FILE%"=="" (
+    rem 方法2: フォルダリストファイル指定
+    SET CMD=python "%SCRIPT_DIR%keyword_search.py" "%KEYWORD%" --folders-file "%FOLDERS_FILE%"
+) ELSE (
+    rem 方法1: 単一フォルダ直接指定
+    SET CMD=python "%SCRIPT_DIR%keyword_search.py" "%TARGET_FOLDER%" "%KEYWORD%"
+)
 
 IF NOT "%EXT%"==""              SET CMD=%CMD% --ext %EXT%
 IF NOT "%FILENAME_FILTER%"==""  SET CMD=%CMD% --filename "%FILENAME_FILTER%"
