@@ -1,34 +1,33 @@
 @echo off
-chcp 65001 > nul
 setlocal
 
 rem ============================================================
-rem  check_existence2 実行バッチ（軸ファイル方式）
-rem  ★ 以下の SET 行を環境に合わせて変更してください
+rem  check_existence2 ���s�o�b�`�i���t�@�C�������j
+rem  �� �ȉ��� SET �s�����ɍ��킹�ĕύX���Ă�������
 rem ============================================================
 
-rem 軸ファイルのCSVパス（全列を出力する主役）
+rem ���t�@�C����CSV�p�X�i�S����o�͂������j
 SET AXIS_CSV=C:\work\axis.csv
 
-rem 比較ファイルのCSVパス
+rem ��r�t�@�C����CSV�p�X
 SET COMPARE_CSV=C:\work\compare.csv
 
-rem 軸ファイルのキー列名（省略時: ファイル名）
+rem ���t�@�C���̃L�[�񖼁i�ȗ���: �t�@�C�����j
 SET AXIS_KEY=
 
-rem 比較ファイルのキー列名（省略時: ファイル名）
+rem ��r�t�@�C���̃L�[�񖼁i�ȗ���: �t�@�C�����j
 SET COMPARE_KEY=
 
-rem 出力CSV上での比較列のヘッダ名（省略時: 比較）
+rem �o��CSV��ł̔�r��̃w�b�_���i�ȗ���: ��r�j
 SET COMPARE_LABEL=
 
-rem 出力CSVのパス（省略時: このバッチと同じフォルダに check_existence2_result.csv を出力）
+rem �o��CSV�̃p�X�i�ȗ���: ���̃o�b�`�Ɠ����t�H���_�� check_existence2_result.csv ���o�́j
 SET OUTPUT=
 
-rem 出力CSVの文字コード（省略時: cp932）
+rem �o��CSV�̕����R�[�h�i�ȗ���: cp932�j
 SET ENCODING=
 
-rem キー列の大文字/小文字を区別する場合は --case-sensitive、しない場合は空欄
+rem �L�[��̑啶��/����������ʂ���ꍇ�� --case-sensitive�A���Ȃ��ꍇ�͋�
 SET CASE_SENSITIVE=
 
 rem ============================================================
@@ -42,9 +41,9 @@ IF NOT "%COMPARE_KEY%"==""    SET CMD=%CMD% --compare-key "%COMPARE_KEY%"
 IF NOT "%COMPARE_LABEL%"==""  SET CMD=%CMD% --compare-label "%COMPARE_LABEL%"
 IF NOT "%OUTPUT%"==""         SET CMD=%CMD% --output "%OUTPUT%"
 IF NOT "%ENCODING%"==""       SET CMD=%CMD% --encoding %ENCODING%
-IF NOT "%CASE_SENSITIVE%"=""  SET CMD=%CMD% %CASE_SENSITIVE%
+IF NOT "%CASE_SENSITIVE%"==""  SET CMD=%CMD% %CASE_SENSITIVE%
 
-echo 実行コマンド: %CMD%
+echo ���s�R�}���h: %CMD%
 echo.
 %CMD%
 

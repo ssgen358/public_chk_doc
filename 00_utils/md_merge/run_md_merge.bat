@@ -1,25 +1,24 @@
 @echo off
-chcp 65001 > nul
 setlocal
 
 rem ============================================================
-rem  md_merge 実行バッチ
-rem  ★ 以下の SET 行を環境に合わせて変更してください
+rem  md_merge ���s�o�b�`
+rem  �� �ȉ��� SET �s�����ɍ��킹�ĕύX���Ă�������
 rem ============================================================
 
-rem 対象フォルダ（結合する .md ファイルがあるフォルダのパス）
+rem �Ώۃt�H���_�i�������� .md �t�@�C��������t�H���_�̃p�X�j
 SET TARGET_FOLDER=C:\work\docs
 
-rem 出力先フォルダ（省略するとこのバッチと同じフォルダに出力）
+rem �o�͐�t�H���_�i�ȗ�����Ƃ��̃o�b�`�Ɠ����t�H���_�ɏo�́j
 SET OUTDIR=
 
-rem 見出しレベル（1=# / 2=## / 3=###）
+rem ���o�����x���i1=# / 2=## / 3=###�j
 SET LEVEL=2
 
-rem サブフォルダを含めない場合は --no-recursive、含める場合は空欄
+rem �T�u�t�H���_���܂߂Ȃ��ꍇ�� --no-recursive�A�܂߂�ꍇ�͋�
 SET NO_RECURSIVE=
 
-rem ファイル間の区切り線（---）を省略する場合は --no-separator、付ける場合は空欄
+rem �t�@�C���Ԃ̋�؂���i---�j���ȗ�����ꍇ�� --no-separator�A�t����ꍇ�͋�
 SET NO_SEPARATOR=
 
 rem ============================================================
@@ -31,9 +30,9 @@ SET CMD=python "%SCRIPT_DIR%md_merge.py" "%TARGET_FOLDER%"
 SET CMD=%CMD% --level %LEVEL%
 IF NOT "%OUTDIR%"==""       SET CMD=%CMD% --output "%OUTDIR%"
 IF NOT "%NO_RECURSIVE%"=="" SET CMD=%CMD% %NO_RECURSIVE%
-IF NOT "%NO_SEPARATOR%"=""  SET CMD=%CMD% %NO_SEPARATOR%
+IF NOT "%NO_SEPARATOR%"==""  SET CMD=%CMD% %NO_SEPARATOR%
 
-echo 実行コマンド: %CMD%
+echo ���s�R�}���h: %CMD%
 echo.
 %CMD%
 
