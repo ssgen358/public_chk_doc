@@ -58,6 +58,9 @@ PythonとAIの役割を明確に分担する。
 | フォルダ | 概要 | スクリプト | 担当 |
 |----------|------|-----------|------|
 | `00_utils/file_list/` | フォルダ配下のファイルを一覧化（CSV出力） | `file_list.py` / `file_list_batch.py` | Python |
+| `00_utils/excel_extract/` | Excelの指定シートからデータ行を抽出・マージ（CSV出力） | `excel_extract.py` | Python |
+| `00_utils/keyword_search/` | キーワードを含むファイル・行を一覧表示（テキスト/Excel/Word対応） | `keyword_search.py` | Python |
+| `00_utils/md_merge/` | フォルダ配下の Markdown ファイルを1つに結合（ファイル名見出し付き） | `md_merge.py` | Python |
 
 ## 対象ドキュメント種別（想定）
 
