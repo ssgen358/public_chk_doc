@@ -37,8 +37,8 @@ SET FILENAME_FILTER=
 rem 大文字小文字を区別しない場合は --ignore-case、区別する場合は空欄
 SET IGNORE_CASE=--ignore-case
 
-rem 出力先フォルダ（省略するとこのバッチと同じフォルダに出力）
-SET OUTDIR=
+rem 出力先フォルダ（デフォルト: csv フォルダ）
+SET OUTDIR=%~dp0..\..\csv
 
 rem ============================================================
 

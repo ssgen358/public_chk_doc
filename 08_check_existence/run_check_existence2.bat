@@ -21,8 +21,8 @@ SET COMPARE_KEY=
 rem 出力CSV上での比較列のヘッダ名（省略時: 比較）
 SET COMPARE_LABEL=
 
-rem 出力CSVのパス（省略時: このバッチと同じフォルダに check_existence2_result.csv を出力）
-SET OUTPUT=
+rem 出力CSVのパス（デフォルト: csv フォルダに check_existence2_result.csv を出力）
+SET OUTPUT=%~dp0..\csv\check_existence2_result.csv
 
 rem 出力CSVの文字コード（省略時: cp932）
 SET ENCODING=

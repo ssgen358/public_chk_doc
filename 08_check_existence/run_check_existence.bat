@@ -21,8 +21,8 @@ SET ACTUAL_COL=
 rem 設計書CSVの出典列名（省略時: 抽出元ファイル名）
 SET DOC_INFO_COL=
 
-rem 出力CSVのパス（省略時: このバッチと同じフォルダに check_existence_result.csv を出力）
-SET OUTPUT=
+rem 出力CSVのパス（デフォルト: csv フォルダに check_existence_result.csv を出力）
+SET OUTPUT=%~dp0..\csv\check_existence_result.csv
 
 rem 出力CSVの文字コード（省略時: cp932）
 SET ENCODING=

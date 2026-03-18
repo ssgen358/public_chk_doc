@@ -8,7 +8,9 @@ __pycache__/
 .venv/
 venv/
 
-# チェック結果の出力ファイル（作業ファイルなのでコミット不要）
+# csv/ フォルダの中間ファイル・チェック結果（コミット不要）
+csv/*.csv
+# 旧来の出力ファイルも除外（ツールフォルダ直下に出力した場合）
 *_result.csv
 file_list.csv
 file_list_batch.csv

@@ -62,6 +62,21 @@ PythonとAIの役割を明確に分担する。
 | `00_utils/keyword_search/` | キーワードを含むファイル・行を一覧表示（テキスト/Excel/Word対応） | `keyword_search.py` | Python |
 | `00_utils/md_merge/` | フォルダ配下の Markdown ファイルを1つに結合（ファイル名見出し付き） | `md_merge.py` | Python |
 
+## CSV中継フォルダ（csv/）
+
+ツール間でCSVファイルを受け渡す際の共通フォルダ。
+
+```
+csv/
+├── file_list.csv               ← file_list.py の出力
+├── excel_extract_result.csv    ← excel_extract.py の出力
+└── check_existence2_result.csv ← check_existence2.py の出力（例）
+```
+
+- 各BATファイルのデフォルト出力先はこのフォルダに設定済み
+- `.gitignore` により `csv/*.csv` はコミット対象外（中間ファイルを汚染しない）
+- フォルダ自体は `.gitkeep` でリポジトリ管理（クローン直後から利用可能）
+
 ## 対象ドキュメント種別（想定）
 
 - 画面設計書

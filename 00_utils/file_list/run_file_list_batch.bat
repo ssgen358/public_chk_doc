@@ -16,8 +16,8 @@ SET EXT=.bat
 rem サブフォルダを含めない場合は --no-recursive、含める場合は空欄
 SET NO_RECURSIVE=
 
-rem 出力CSVのパス（省略するとこのバッチと同じフォルダに file_list_batch.csv を出力）
-SET OUTPUT=
+rem 出力CSVのパス（デフォルト: csv フォルダに file_list_batch.csv を出力）
+SET OUTPUT=%~dp0..\..\csv\file_list_batch.csv
 
 rem ============================================================
 
