@@ -30,7 +30,7 @@ PythonとAIの役割を明確に分担する。
 | `03_check_charset/` | 文字種チェック（全角/半角混在等） | - | Python |
 | `04_check_notation/` | 表記揺れ・用語統一 | - | Python |
 | `05_check_naming/` | 命名規約違反の検出 | - | Python |
-| `06_check_duplicate/` | 重複定義・重複記述の検出 | - | Python |
+| `06_check_duplicate/` | 重複定義・重複記述の検出 | `check_duplicate.py` | Python |
 | `07_check_consistency/` | 設計書間の整合性チェック | - | Python |
 | `08_check_existence/` | 実態との突合チェック（設計書記載 vs 実ファイル等） | `check_existence.py` / `check_existence2.py`（軸ファイル方式） | Python |
 | `09_check_ai_review/` | AIによる品質レビュー | - | AI（Claude API等）|
@@ -68,9 +68,10 @@ PythonとAIの役割を明確に分担する。
 
 ```
 csv/
-├── file_list.csv               ← file_list.py の出力
-├── excel_extract_result.csv    ← excel_extract.py の出力
-└── check_existence2_result.csv ← check_existence2.py の出力（例）
+├── file_list.csv                  ← file_list.py の出力
+├── excel_extract_result.csv       ← excel_extract.py の出力
+├── check_duplicate_result.csv     ← check_duplicate.py の出力（例）
+└── check_existence2_result.csv    ← check_existence2.py の出力（例）
 ```
 
 - 各BATファイルのデフォルト出力先はこのフォルダに設定済み
