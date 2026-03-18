@@ -25,7 +25,7 @@ SET SCRIPT_DIR=%~dp0
 
 SET CMD=python "%SCRIPT_DIR%file_list_batch.py" "%LIST_CSV%"
 
-IF NOT "%EXT%"==""          SET CMD=%CMD% --ext %EXT%
+IF NOT "%EXT%"==""          SET CMD=%CMD% --ext "%EXT%"
 IF NOT "%NO_RECURSIVE%"==""  SET CMD=%CMD% %NO_RECURSIVE%
 IF NOT "%OUTPUT%"==""       SET CMD=%CMD% --output "%OUTPUT%"
 

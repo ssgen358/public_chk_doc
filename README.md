@@ -32,7 +32,7 @@ PythonとAIの役割を明確に分担する。
 | `05_check_naming/` | 命名規約違反の検出 | - | Python |
 | `06_check_duplicate/` | 重複定義・重複記述の検出 | - | Python |
 | `07_check_consistency/` | 設計書間の整合性チェック | - | Python |
-| `08_check_existence/` | 実態との突合チェック（設計書記載 vs 実ファイル等） | `check_existence.py` | Python |
+| `08_check_existence/` | 実態との突合チェック（設計書記載 vs 実ファイル等） | `check_existence.py` / `check_existence2.py`（軸ファイル方式） | Python |
 | `09_check_ai_review/` | AIによる品質レビュー | - | AI（Claude API等）|
 
 ### 01_check_format の担当範囲について

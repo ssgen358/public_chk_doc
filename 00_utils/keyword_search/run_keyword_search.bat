@@ -53,7 +53,7 @@ IF NOT "%FOLDERS_FILE%"=="" (
     SET CMD=python "%SCRIPT_DIR%keyword_search.py" "%TARGET_FOLDER%" "%KEYWORD%"
 )
 
-IF NOT "%EXT%"==""              SET CMD=%CMD% --ext %EXT%
+IF NOT "%EXT%"==""              SET CMD=%CMD% --ext "%EXT%"
 IF NOT "%FILENAME_FILTER%"==""  SET CMD=%CMD% --filename "%FILENAME_FILTER%"
 IF NOT "%IGNORE_CASE%"==""      SET CMD=%CMD% %IGNORE_CASE%
 IF NOT "%OUTDIR%"==""           SET CMD=%CMD% --outdir "%OUTDIR%"
