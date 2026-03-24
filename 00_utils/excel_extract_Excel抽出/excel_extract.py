@@ -17,10 +17,16 @@ excel_extract.py - Excelファイルから指定シートのデータ行を抽�
   --start-row          データ読み込み開始行の行番号（省略時: ヘッダー行 + 1）
   --max-empty          連続空行の閾値。この行数連続して空なら終了（省略時: 10）
   --output, -o         出力CSVのパス（省略時: excel_extract_result.csv）
+  --encoding           出力CSVの文字コード（省略時: cp932）
   --no-recursive       サブフォルダを含めない
 
 【出力CSVの列】
-  ファイル名（先頭列）, シート名, Excelのヘッダー行の各列名
+  抽出元ファイル名（先頭列）, シート名, Excelのヘッダー行の各列名
+
+【列構造が異なるファイルの扱い】
+  最初に処理したファイルの列構造を基準とする。
+  以降のファイルで列構造が異なる場合は [WARN] を出力しつつマージを継続する。
+  全ファイルの列名をユニオンして出力CSVに反映し、値がない列は空欄とする。
 
 【ワイルドカード仕様】
   *  : 任意の文字列にマッチ（例: ファイル* → ファイル一覧、ファイル情報 など）
@@ -218,7 +224,7 @@ def extract_from_excel(
             all_headers = headers
 
         for row in rows:
-            row["ファイル名"] = file_name
+            row["抽出元ファイル名"] = file_name
             row["シート名"] = sheet_name
             all_rows.append(row)
 
@@ -236,11 +242,14 @@ def write_csv(
     all_headers: list[str],
     all_rows: list[dict],
     output_path: str,
+    encoding: str = "cp932",
 ) -> None:
-    """マージ済みデータをCSVに書き出す。先頭列はファイル名・シート名。"""
-    fieldnames = ["ファイル名", "シート名"] + all_headers
-    with open(output_path, "w", newline="", encoding="utf-8-sig") as f:
-        writer = csv.DictWriter(f, fieldnames=fieldnames, extrasaction="ignore")
+    """マージ済みデータをCSVに書き出す。先頭列は抽出元ファイル名・シート名。
+    列がないファイル由来の行は該当列を空欄で出力する。
+    """
+    fieldnames = ["抽出元ファイル名", "シート名"] + all_headers
+    with open(output_path, "w", newline="", encoding=encoding) as f:
+        writer = csv.DictWriter(f, fieldnames=fieldnames, extrasaction="ignore", restval="")
         writer.writeheader()
         writer.writerows(all_rows)
 
@@ -260,6 +269,7 @@ def main() -> None:
     parser.add_argument("--start-row", type=int, default=None, help="データ読み込み開始行の行番号（省略時: ヘッダー行 + 1）")
     parser.add_argument("--max-empty", type=int, default=10, help="終了と判断する連続空行数（デフォルト: 10）")
     parser.add_argument("--output", "-o", default="excel_extract_result.csv", help="出力CSVのパス（デフォルト: excel_extract_result.csv）")
+    parser.add_argument("--encoding", default="cp932", help="出力CSVの文字コード（デフォルト: cp932）")
     parser.add_argument("--no-recursive", action="store_true", help="サブフォルダを含めない")
 
     args = parser.parse_args()
@@ -298,6 +308,8 @@ def main() -> None:
     all_rows: list[dict] = []
     total_rows = 0
     skipped_files = 0
+    warn_files = 0         # 列構造が基準と異なるファイル数
+    baseline_file = ""     # 基準となった最初のファイル名
 
     for file_path in excel_files:
         file_name = os.path.basename(file_path)
@@ -317,7 +329,26 @@ def main() -> None:
             continue
 
         if not all_headers:
-            all_headers = headers
+            # 最初のファイル → 基準として設定
+            all_headers = list(headers)
+            baseline_file = file_name
+        else:
+            # 2ファイル目以降 → 基準との差分チェック
+            current_set = set(headers)
+            baseline_set = set(all_headers)
+            missing = [h for h in all_headers if h not in current_set]
+            extra   = [h for h in headers     if h not in baseline_set]
+
+            if missing or extra:
+                print(f"  [WARN] 列構造が基準ファイルと異なります: {file_name}（基準: {baseline_file}）", file=sys.stderr)
+                if missing:
+                    print(f"         基準にあってこのファイルにない列: {missing}", file=sys.stderr)
+                if extra:
+                    print(f"         このファイルにあって基準にない列: {extra}", file=sys.stderr)
+                warn_files += 1
+                # 新列を all_headers に追加（ユニオン・追加順を保持）
+                for h in extra:
+                    all_headers.append(h)
 
         all_rows.extend(rows)
         total_rows += len(rows)
@@ -328,9 +359,11 @@ def main() -> None:
         print("抽出できたデータがありませんでした。")
         sys.exit(0)
 
-    write_csv(all_headers, all_rows, args.output)
+    write_csv(all_headers, all_rows, args.output, args.encoding)
 
     print(f"完了: 合計 {total_rows} 行を抽出しました。（スキップ: {skipped_files} ファイル）")
+    if warn_files:
+        print(f"※ 列構造が基準と異なるファイルが {warn_files} 件ありました。詳細は上記 [WARN] を確認してください。")
     print(f"出力先: {args.output}")
 
 

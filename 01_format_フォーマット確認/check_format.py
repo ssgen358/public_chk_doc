@@ -17,6 +17,7 @@ YAMLで定義したテンプレートに対して、対象Excelファイルの�
   target           チェック対象のExcelファイル、またはフォルダのパス
   --template, -t   テンプレート定義YAMLファイルのパス（必須）
   --output, -o     出力CSVのパス（省略時: check_format_result.csv）
+  --encoding       出力CSVの文字コード（省略時: cp932）
   --no-recursive   フォルダ指定時にサブフォルダを含めない
 
 【出力CSVの列】
@@ -227,10 +228,10 @@ def collect_excel_files(target: str, recursive: bool) -> list[str]:
 # CSV出力
 # -----------------------------------------------------------------------
 
-def write_csv(results: list[CheckResult], output_path: str) -> None:
+def write_csv(results: list[CheckResult], output_path: str, encoding: str = "cp932") -> None:
     """チェック結果をCSVに書き出す。"""
     fieldnames = ["ファイル名", "シート名", "チェック項目", "結果", "詳細"]
-    with open(output_path, "w", newline="", encoding="utf-8-sig") as f:
+    with open(output_path, "w", newline="", encoding=encoding) as f:
         writer = csv.DictWriter(f, fieldnames=fieldnames)
         writer.writeheader()
         for r in results:
@@ -281,6 +282,7 @@ def main() -> None:
     parser.add_argument("target", help="チェック対象のExcelファイル、またはフォルダのパス")
     parser.add_argument("--template", "-t", required=True, help="テンプレート定義YAMLファイルのパス")
     parser.add_argument("--output", "-o", default="check_format_result.csv", help="出力CSVのパス（デフォルト: check_format_result.csv）")
+    parser.add_argument("--encoding", default="cp932", help="出力CSVの文字コード（デフォルト: cp932）")
     parser.add_argument("--no-recursive", action="store_true", help="サブフォルダを含めない")
 
     args = parser.parse_args()
@@ -314,7 +316,7 @@ def main() -> None:
     print()
 
     # 結果出力
-    write_csv(all_results, args.output)
+    write_csv(all_results, args.output, args.encoding)
     print_summary(all_results)
     print()
     print(f"出力先: {args.output}")

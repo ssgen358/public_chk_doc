@@ -1,5 +1,5 @@
 """
-check_existence2.py - 軸ファイル方式の突合チェックツール
+check_existence.py - 軸ファイル方式の突合チェックツール
 
 【概要】
 軸ファイル（A）の全列をそのまま出力しつつ、比較ファイル（B）のキー列の値を
@@ -7,7 +7,7 @@ check_existence2.py - 軸ファイル方式の突合チェックツール
 比較ファイルにのみ存在する行は末尾にまとめて追記される。
 
 【使い方】
-  python check_existence2.py --axis A.csv --compare B.csv [オプション]
+  python check_existence.py --axis A.csv --compare B.csv [オプション]
 
 【引数】
   --axis           軸ファイルのCSVパス（全列を出力）
@@ -15,7 +15,7 @@ check_existence2.py - 軸ファイル方式の突合チェックツール
   --axis-key       軸ファイルのキー列名（デフォルト: ファイル名）
   --compare-key    比較ファイルのキー列名（デフォルト: ファイル名）
   --compare-label  出力CSV上での比較列のヘッダ名（デフォルト: 比較）
-  --output, -o     出力CSVのパス（デフォルト: check_existence2_result.csv）
+  --output, -o     出力CSVのパス（デフォルト: check_existence_result.csv）
   --encoding       出力CSVの文字コード（デフォルト: cp932）
   --case-sensitive キー列の大文字/小文字を区別する（省略時: 区別しない）
 
@@ -26,10 +26,10 @@ check_existence2.py - 軸ファイル方式の突合チェックツール
   ・比較ファイルにのみ存在する行は末尾にまとめて追記される
 
 【使用例】
-  python check_existence2.py --axis 設計書.csv --compare 実ファイル.csv
-  python check_existence2.py --axis 設計書.csv --compare 実ファイル.csv \\
+  python check_existence.py --axis 設計書.csv --compare 実ファイル.csv
+  python check_existence.py --axis 設計書.csv --compare 実ファイル.csv \\
       --axis-key ファイル名 --compare-key ファイル名 --compare-label 実ファイル
-  python check_existence2.py --axis A.csv --compare B.csv -o result.csv
+  python check_existence.py --axis A.csv --compare B.csv -o result.csv
 """
 
 import argparse
@@ -217,8 +217,8 @@ def main() -> None:
                         help="比較ファイルのキー列名（デフォルト: ファイル名）")
     parser.add_argument("--compare-label", default="比較",
                         help="出力CSV上での比較列のヘッダ名（デフォルト: 比較）")
-    parser.add_argument("--output", "-o", default="check_existence2_result.csv",
-                        help="出力CSVのパス（デフォルト: check_existence2_result.csv）")
+    parser.add_argument("--output", "-o", default="check_existence_result.csv",
+                        help="出力CSVのパス（デフォルト: check_existence_result.csv）")
     parser.add_argument("--encoding", default="cp932",
                         help="出力CSVの文字コード（デフォルト: cp932）")
     parser.add_argument("--case-sensitive", action="store_true",
@@ -246,6 +246,31 @@ def main() -> None:
     # キー列の存在確認
     validate_key_col(axis_fieldnames, args.axis_key, "軸ファイル", args.axis)
     validate_key_col(compare_fieldnames, args.compare_key, "比較ファイル", args.compare)
+
+    # 軸ファイル内のキー列重複チェック
+    seen: dict[str, str] = {}
+    duplicates: list[str] = []
+    for row in axis_rows:
+        val = row.get(args.axis_key, "").strip()
+        if not val:
+            continue
+        key = val.lower() if ignore_case else val
+        if key in seen:
+            duplicates.append(val)
+        else:
+            seen[key] = val
+    if duplicates:
+        print(f"[ERROR] 軸ファイルにキー列の重複があります: {duplicates}", file=sys.stderr)
+        print(f"        突合前に重複を解消してください。", file=sys.stderr)
+        sys.exit(1)
+
+    # 出力列名の衝突チェック（比較列ラベル・判定列が軸ファイルの既存列と重複しないか）
+    reserved = [args.compare_label, "判定"]
+    conflicts = [col for col in reserved if col in axis_fieldnames]
+    if conflicts:
+        print(f"[ERROR] 出力列名が軸ファイルの既存列と重複しています: {conflicts}", file=sys.stderr)
+        print(f"        --compare-label で別の列名を指定してください。", file=sys.stderr)
+        sys.exit(1)
 
     print(f"軸ファイル行数   : {len(axis_rows)} 件")
     print(f"比較ファイル行数 : {len(compare_rows)} 件")

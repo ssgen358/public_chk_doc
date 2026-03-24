@@ -25,19 +25,19 @@ PythonとAIの役割を明確に分担する。
 
 | フォルダ | チェック観点 | スクリプト | 担当 |
 |----------|-------------|-----------|------|
-| `01_check_format/` | フォーマット準拠（テンプレート構造） | `check_format.py` | Python |
-| `02_check_required/` | 必須項目の未入力・空欄検出 | - | Python |
-| `03_check_charset/` | 文字種チェック（全角/半角混在等） | - | Python |
-| `04_check_notation/` | 表記揺れ・用語統一 | - | Python |
-| `05_check_naming/` | 命名規約違反の検出 | - | Python |
-| `06_check_duplicate/` | 重複定義・重複記述の検出 | `check_duplicate.py` | Python |
-| `07_check_consistency/` | 設計書間の整合性チェック | - | Python |
-| `08_check_existence/` | 実態との突合チェック（設計書記載 vs 実ファイル等） | `check_existence.py` / `check_existence2.py`（軸ファイル方式） | Python |
-| `09_check_ai_review/` | AIによる品質レビュー | - | AI（Claude API等）|
+| `01_format_フォーマット確認/` | フォーマット準拠（テンプレート構造） | `check_format.py` | Python |
+| `02_required_必須項目確認/` | 必須項目の未入力・空欄検出 | - | Python |
+| `03_charset_文字種確認/` | 文字種チェック（全角/半角混在等） | - | Python |
+| `04_notation_表記揺れ確認/` | 表記揺れ・用語統一 | - | Python |
+| `05_naming_命名規約確認/` | 命名規約違反の検出 | - | Python |
+| `06_duplicate_重複確認/` | 重複定義・重複記述の検出 | `check_duplicate.py` | Python |
+| `07_consistency_整合性確認/` | 設計書間の整合性チェック | - | Python |
+| `08_existence_実態突合確認/` | 実態との突合チェック（設計書記載 vs 実ファイル等） | `check_existence.py`（軸ファイル方式） | Python |
+| `09_ai_review_AIレビュー/` | AIによる品質レビュー | - | AI（Claude API等）|
 
-### 01_check_format の担当範囲について
+### 01_format_フォーマット確認 の担当範囲について
 
-`01_check_format` は**テンプレート定義（YAML）との構造的な一致**のみを確認する前提チェック。
+`01_format_フォーマット確認` は**テンプレート定義（YAML）との構造的な一致**のみを確認する前提チェック。
 01がNGの場合、後続のチェックは正しく機能しない可能性があるため、最初に実施する。
 
 | チェック内容 | 01の担当 | 担当ツール |
@@ -57,10 +57,10 @@ PythonとAIの役割を明確に分担する。
 
 | フォルダ | 概要 | スクリプト | 担当 |
 |----------|------|-----------|------|
-| `00_utils/file_list/` | フォルダ配下のファイルを一覧化（CSV出力） | `file_list.py` / `file_list_batch.py` | Python |
-| `00_utils/excel_extract/` | Excelの指定シートからデータ行を抽出・マージ（CSV出力） | `excel_extract.py` | Python |
-| `00_utils/keyword_search/` | キーワードを含むファイル・行を一覧表示（テキスト/Excel/Word対応） | `keyword_search.py` | Python |
-| `00_utils/md_merge/` | フォルダ配下の Markdown ファイルを1つに結合（ファイル名見出し付き） | `md_merge.py` | Python |
+| `00_utils/file_list_ファイル一覧/` | フォルダ配下のファイルを一覧化（CSV出力） | `file_list.py` / `file_list_batch.py` | Python |
+| `00_utils/excel_extract_Excel抽出/` | Excelの指定シートからデータ行を抽出・マージ（CSV出力） | `excel_extract.py` | Python |
+| `00_utils/keyword_search_キーワード検索/` | キーワードを含むファイル・行を一覧表示（テキスト/Excel/Word対応） | `keyword_search.py` | Python |
+| `00_utils/md_merge_MD結合/` | フォルダ配下の Markdown ファイルを1つに結合（ファイル名見出し付き） | `md_merge.py` | Python |
 
 ## CSV中継フォルダ（csv/）
 
@@ -71,7 +71,7 @@ csv/
 ├── file_list.csv                  ← file_list.py の出力
 ├── excel_extract_result.csv       ← excel_extract.py の出力
 ├── check_duplicate_result.csv     ← check_duplicate.py の出力（例）
-└── check_existence2_result.csv    ← check_existence2.py の出力（例）
+└── check_existence_result.csv     ← check_existence.py の出力（例）
 ```
 
 - 各BATファイルのデフォルト出力先はこのフォルダに設定済み
