@@ -1,0 +1,108 @@
+# notation_rules_sample.yaml - 表記揺れルール定義ファイル（サンプル）
+#
+# 【使い方】
+#   このファイルをコピーしてプロジェクト用に編集してください。
+#   synonyms の各エントリで「正規表記（correct）」と「揺れ語リスト（variants）」を定義します。
+#
+# 【チェックモードについて】
+#   --partial なし（完全一致）: セル値全体が variants のいずれかと一致した場合に検出
+#   --partial あり（部分一致）: セル値の中に variants のいずれかが含まれる場合に検出
+#                               ※ 正規表記を除去した残りで検索するため、混在ケースも検出可能
+#
+# 【注意】
+#   correct / variants の値はすべて文字列として定義してください。
+
+synonyms:
+
+  # ── システム用語 ─────────────────────────────────────────────────────
+
+  - correct: "ユーザー"
+    variants:
+      - "ユーザ"
+      - "USER"
+      - "user"
+      - "利用者"
+
+  - correct: "ログイン"
+    variants:
+      - "ログオン"
+      - "サインイン"
+      - "login"
+      - "Login"
+
+  - correct: "ログアウト"
+    variants:
+      - "ログオフ"
+      - "サインアウト"
+      - "logout"
+      - "Logout"
+
+  - correct: "マスタ"
+    variants:
+      - "マスター"
+      - "master"
+      - "Master"
+
+  # ── DB・テーブル関連 ─────────────────────────────────────────────────
+
+  - correct: "主キー"
+    variants:
+      - "プライマリキー"
+      - "PK"
+      - "pk"
+
+  - correct: "外部キー"
+    variants:
+      - "フォーリンキー"
+      - "FK"
+      - "fk"
+
+  - correct: "インデックス"
+    variants:
+      - "インデクス"
+      - "index"
+      - "Index"
+
+  # ── 画面・UI関連 ─────────────────────────────────────────────────────
+
+  - correct: "ボタン"
+    variants:
+      - "button"
+      - "Button"
+      - "BTN"
+
+  - correct: "チェックボックス"
+    variants:
+      - "チェックボックス"
+      - "チェック BOX"
+      - "checkbox"
+
+  - correct: "ドロップダウン"
+    variants:
+      - "プルダウン"
+      - "セレクトボックス"
+      - "ドロップダウンリスト"
+
+  # ── 処理・動作関連 ────────────────────────────────────────────────────
+
+  - correct: "登録"
+    variants:
+      - "追加"
+      - "新規作成"
+      - "insert"
+      - "INSERT"
+
+  - correct: "更新"
+    variants:
+      - "変更"
+      - "修正"
+      - "edit"
+      - "update"
+      - "UPDATE"
+
+  - correct: "削除"
+    variants:
+      - "除去"
+      - "delete"
+      - "DELETE"
+      - "remove"

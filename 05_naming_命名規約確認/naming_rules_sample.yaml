@@ -1,0 +1,75 @@
+# naming_rules_sample.yaml - 命名規約ルール定義ファイル（サンプル）
+#
+# 【使い方】
+#   このファイルをコピーしてプロジェクト用に編集してください。
+#   rules の各エントリで「チェック対象列（target）」と「ルール内容」を定義します。
+#
+# 【ルール項目の説明】
+#   target        : チェック対象のCSV列名（必須）
+#   description   : ルールの説明（コンソール出力に使用）
+#   pattern       : 許可する値の正規表現（省略可）。match() で先頭から全体に適用
+#   max_length    : 最大文字数（省略可）
+#   forbidden_words: 使用禁止の語リスト（省略可）。大文字小文字を区別しない
+#   allow_empty   : 空値を許可するか（省略時: true = 空セルはスキップ）
+#
+# 【注意】
+#   target に指定した列名がCSVに存在しない場合はスキップされ、警告を表示します。
+
+rules:
+
+  # ── テーブル定義書向け ────────────────────────────────────────────────
+
+  - target: "テーブル名（物理）"
+    description: "t_ プレフィックス + スネークケース（小文字英数字+アンダースコア）"
+    pattern: "^t_[a-z][a-z0-9_]*$"
+    max_length: 30
+    forbidden_words:
+      - "order"       # SQLの予約語
+      - "select"
+      - "from"
+      - "where"
+      - "group"
+      - "table"
+
+  - target: "カラム名（物理）"
+    description: "スネークケース（小文字英数字+アンダースコア、先頭は英字）"
+    pattern: "^[a-z][a-z0-9_]*$"
+    max_length: 30
+    forbidden_words:
+      - "order"
+      - "select"
+      - "from"
+      - "where"
+      - "group"
+
+  # ── 画面設計書向け ────────────────────────────────────────────────────
+
+  - target: "画面ID"
+    description: "SCR_ プレフィックス + 大文字英数字+アンダースコア"
+    pattern: "^SCR_[A-Z0-9_]+$"
+    max_length: 20
+
+  - target: "項目ID"
+    description: "大文字英数字+アンダースコア（先頭は英字）"
+    pattern: "^[A-Z][A-Z0-9_]*$"
+    max_length: 30
+
+  # ── IF設計書向け ──────────────────────────────────────────────────────
+
+  - target: "IF名（物理）"
+    description: "IF_ プレフィックス + 大文字英数字+アンダースコア"
+    pattern: "^IF_[A-Z0-9_]+$"
+    max_length: 40
+
+  # ── バッチ設計書向け ──────────────────────────────────────────────────
+
+  - target: "バッチID"
+    description: "BAT_ プレフィックス + 大文字英数字+アンダースコア"
+    pattern: "^BAT_[A-Z0-9_]+$"
+    max_length: 30
+
+  # ── 汎用（空値を禁止したい列の例） ───────────────────────────────────
+
+  # - target: "設計書名"
+  #   description: "空値不可"
+  #   allow_empty: false
