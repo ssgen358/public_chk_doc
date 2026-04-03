@@ -18,6 +18,8 @@ keyword_search.py - キーワード検索ツール
 
 【オプション】
   --folders-file テキストファイルから対象フォルダを複数読み込む（1行1フォルダ）
+                 行末に |no-recursive または |recursive を付けるとフォルダごとに個別指定可能
+                 例: C:\work\設計書\PJA|no-recursive
   --ext          対象拡張子をカンマ区切りで指定（省略時: .txt,.csv,.md,.xlsx,.xls,.docx）
                  例: --ext .xlsx,.csv
   --filename     ファイル名フィルタ（ワイルドカード対応、省略時: 全ファイル）
@@ -328,8 +330,18 @@ def write_csv(records: list[dict], output_path: str, encoding: str = "cp932") ->
 # メイン
 # ---------------------------------------------------------------------------
 
-def load_folders_file(filepath: str) -> list[str]:
-    """フォルダリストファイルを読み込む。空行・#始まり行はスキップ。"""
+def load_folders_file(filepath: str) -> list[tuple[str, bool | None]]:
+    """フォルダリストファイルを読み込む。空行・#始まり行はスキップ。
+
+    各行の形式:
+      <フォルダパス>                  → recursive はグローバル設定に従う（None）
+      <フォルダパス>|no-recursive     → このフォルダはサブフォルダを含めない
+      <フォルダパス>|recursive        → このフォルダはサブフォルダを含める
+
+    Returns:
+        (フォルダパス, recursive設定) のリスト。recursive設定は True/False/None。
+        None はグローバル設定に従うことを意味する。
+    """
     folders = []
     for enc in ("utf-8-sig", "utf-8", "cp932"):
         try:
@@ -346,7 +358,21 @@ def load_folders_file(filepath: str) -> list[str]:
         line = line.strip()
         if not line or line.startswith("#"):
             continue
-        folders.append(line)
+        if "|" in line:
+            path, flag = line.rsplit("|", maxsplit=1)
+            path = path.strip()
+            flag = flag.strip().lower()
+            if flag == "no-recursive":
+                folders.append((path, False))
+            elif flag == "recursive":
+                folders.append((path, True))
+            else:
+                # 不明なフラグは無視してグローバル設定に従う
+                print(f"[WARN] 不明なフラグを無視します（使用可能: no-recursive / recursive）: |{flag}",
+                      file=sys.stderr)
+                folders.append((path, None))
+        else:
+            folders.append((line, None))
     return folders
 
 
@@ -377,6 +403,8 @@ def main() -> None:
     args = parser.parse_args()
 
     # 対象フォルダリストの決定
+    # target_folders は (フォルダパス, recursive設定) のリスト
+    # recursive設定が None の場合はグローバルの --no-recursive に従う
     if args.folders_file:
         # テキストファイルから複数フォルダを読み込む
         if not os.path.isfile(args.folders_file):
@@ -388,15 +416,15 @@ def main() -> None:
                   file=sys.stderr)
             sys.exit(1)
     elif args.folder:
-        # 単一フォルダ指定（従来通り）
-        target_folders = [args.folder]
+        # 単一フォルダ指定（recursive設定はグローバルに従う）
+        target_folders = [(args.folder, None)]
     else:
         print("[ERROR] 対象フォルダを指定してください（引数 or --folders-file）", file=sys.stderr)
         parser.print_help()
         sys.exit(1)
 
     # フォルダの存在確認
-    invalid = [f for f in target_folders if not os.path.isdir(f)]
+    invalid = [f for f, _ in target_folders if not os.path.isdir(f)]
     if invalid:
         for f in invalid:
             print(f"[ERROR] フォルダが見つかりません: {f}", file=sys.stderr)
@@ -408,7 +436,7 @@ def main() -> None:
     else:
         extensions = DEFAULT_EXTENSIONS
 
-    recursive = not args.no_recursive
+    global_recursive = not args.no_recursive
     filename_pattern = args.filename if args.filename else None
     sheet_pattern = args.sheet if args.sheet else None
 
@@ -421,20 +449,22 @@ def main() -> None:
     output_path = os.path.join(outdir, f"keyword_search_{timestamp}.csv")
 
     print(f"対象フォルダ   : {len(target_folders)} 件")
-    for f in target_folders:
-        print(f"  {f}")
+    for f, rec in target_folders:
+        effective = global_recursive if rec is None else rec
+        label = "（個別指定）" if rec is not None else ""
+        print(f"  {f}  [サブフォルダ: {'含める' if effective else '含めない'}{label}]")
     print(f"キーワード     : {args.keyword}")
     print(f"拡張子フィルタ : {sorted(extensions)}")
     print(f"ファイル名     : {filename_pattern if filename_pattern else '（指定なし）'}")
     print(f"シート名       : {sheet_pattern if sheet_pattern else '（指定なし＝全シート）'}")
-    print(f"サブフォルダ   : {'含めない' if not recursive else '含める'}")
     print(f"大文字小文字   : {'区別しない' if args.ignore_case else '区別する'}")
     print(f"出力先         : {output_path}")
     print()
 
-    # ファイル収集（全フォルダ分）
+    # ファイル収集（フォルダごとに recursive 設定を適用）
     all_filepaths: list[str] = []
-    for folder in target_folders:
+    for folder, rec in target_folders:
+        recursive = global_recursive if rec is None else rec
         all_filepaths.extend(collect_files(folder, extensions, filename_pattern, recursive))
 
     if not all_filepaths:
