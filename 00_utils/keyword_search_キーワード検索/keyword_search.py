@@ -5,6 +5,7 @@ keyword_search.py - キーワード検索ツール
 指定したフォルダ配下のファイルを対象に、特定のキーワードを含む行・セルを検索し、
 ファイル名と該当箇所の内容を一覧で出力する。
 テキスト系ファイル（.txt/.csv/.md 等）、Excel（.xlsx/.xls）、Word（.docx）に対応。
+.xlsx は openpyxl、.xls は xlrd を使用する（pip install openpyxl xlrd）。
 
 【使い方】
   単一フォルダ指定:
@@ -21,6 +22,8 @@ keyword_search.py - キーワード検索ツール
                  例: --ext .xlsx,.csv
   --filename     ファイル名フィルタ（ワイルドカード対応、省略時: 全ファイル）
                  例: --filename "IF*.xlsx"
+  --sheet        Excelのシート名フィルタ（ワイルドカード対応、省略時: 全シート）
+                 例: --sheet "一覧*"
   --no-recursive サブフォルダを含めない（省略時: サブフォルダも含める）
   --ignore-case  大文字/小文字を区別しない（省略時: 区別する）
   --outdir       出力先フォルダのパス（省略時: このスクリプトと同じフォルダ）
@@ -31,7 +34,7 @@ keyword_search.py - キーワード検索ツール
 
   「場所」の表記：
     テキスト/CSV系 → 行番号（例: L12）
-    Excel          → シート名と行番号（例: Sheet1:R5）
+    Excel          → シート名とセルアドレス（例: Sheet1:B5）
     Word           → 段落番号（例: P3）
 
 【出力ファイル名】
@@ -43,6 +46,10 @@ keyword_search.py - キーワード検索ツール
   python keyword_search.py C:/work/設計書 "ユーザーID" --ext .xlsx,.docx
   python keyword_search.py C:/work/設計書 "エラー" --ignore-case --outdir C:/work/output
 
+  # Excelのシートを絞り込み
+  python keyword_search.py C:/work/設計書 "ユーザーID" --ext .xlsx --sheet "一覧*"
+  python keyword_search.py C:/work/設計書 "エラー" --ext .xlsx --sheet "Sheet1"
+
   # 複数フォルダ（テキストファイル指定）
   python keyword_search.py "ユーザーID" --folders-file folders.txt
   python keyword_search.py "エラー" --folders-file folders.txt --ext .xlsx --ignore-case
@@ -53,6 +60,7 @@ import csv
 import fnmatch
 import os
 import sys
+import unicodedata
 from datetime import datetime
 
 
@@ -86,8 +94,34 @@ def search_text_file(filepath: str, keyword: str, ignore_case: bool) -> list[dic
     return results
 
 
-def search_excel_file(filepath: str, keyword: str, ignore_case: bool) -> list[dict]:
-    """Excel ファイル（.xlsx / .xls）をセル単位で検索する。"""
+def _col_letter(col_idx: int) -> str:
+    """0始まりの列インデックスをExcelの列名（A, B, ..., Z, AA, ...）に変換する。"""
+    letter = ""
+    col_idx += 1  # 1始まりに変換
+    while col_idx > 0:
+        col_idx, remainder = divmod(col_idx - 1, 26)
+        letter = chr(ord("A") + remainder) + letter
+    return letter
+
+
+def search_excel_file(filepath: str, keyword: str, ignore_case: bool,
+                      sheet_pattern: str | None = None) -> list[dict]:
+    """Excel ファイル（.xlsx / .xls）をセル単位で検索する。
+
+    .xlsx は openpyxl、.xls は xlrd で処理する。
+
+    Args:
+        sheet_pattern: シート名フィルタ（ワイルドカード対応）。None の場合は全シートを対象。
+    """
+    ext = os.path.splitext(filepath)[1].lower()
+    if ext == ".xls":
+        return _search_xls_file(filepath, keyword, ignore_case, sheet_pattern)
+    return _search_xlsx_file(filepath, keyword, ignore_case, sheet_pattern)
+
+
+def _search_xlsx_file(filepath: str, keyword: str, ignore_case: bool,
+                      sheet_pattern: str | None) -> list[dict]:
+    """openpyxl で .xlsx を検索する。"""
     try:
         import openpyxl  # noqa: PLC0415
     except ImportError:
@@ -105,20 +139,64 @@ def search_excel_file(filepath: str, keyword: str, ignore_case: bool) -> list[di
               file=sys.stderr)
         return results
 
-    for sheet_name in wb.sheetnames:
-        ws = wb[sheet_name]
-        for row in ws.iter_rows():
-            for cell in row:
-                if cell.value is None:
+    try:
+        for sheet_name in wb.sheetnames:
+            if sheet_pattern and not fnmatch.fnmatch(sheet_name, sheet_pattern):
+                continue
+            ws = wb[sheet_name]
+            for row in ws.iter_rows():
+                for cell in row:
+                    if cell.value is None:
+                        continue
+                    cell_str = str(cell.value)
+                    haystack = cell_str.lower() if ignore_case else cell_str
+                    if needle in haystack:
+                        results.append({
+                            "場所": f"{sheet_name}:{cell.coordinate}",
+                            "内容": cell_str,
+                        })
+    finally:
+        wb.close()
+    return results
+
+
+def _search_xls_file(filepath: str, keyword: str, ignore_case: bool,
+                     sheet_pattern: str | None) -> list[dict]:
+    """xlrd で .xls を検索する。"""
+    try:
+        import xlrd  # noqa: PLC0415
+    except ImportError:
+        print("[WARN] xlrd が未インストールのため .xls ファイルをスキップします。"
+              "  pip install xlrd", file=sys.stderr)
+        return []
+
+    results = []
+    needle = keyword.lower() if ignore_case else keyword
+
+    try:
+        wb = xlrd.open_workbook(filepath)
+    except Exception as e:  # noqa: BLE001
+        print(f"[WARN] Excel(.xls) を開けませんでした ({os.path.basename(filepath)}): {e}",
+              file=sys.stderr)
+        return results
+
+    for sheet_name in wb.sheet_names():
+        if sheet_pattern and not fnmatch.fnmatch(sheet_name, sheet_pattern):
+            continue
+        ws = wb.sheet_by_name(sheet_name)
+        for row_idx in range(ws.nrows):
+            for col_idx in range(ws.ncols):
+                cell_value = ws.cell_value(row_idx, col_idx)
+                if cell_value == "" or cell_value is None:
                     continue
-                cell_str = str(cell.value)
+                cell_str = str(cell_value)
                 haystack = cell_str.lower() if ignore_case else cell_str
                 if needle in haystack:
+                    coordinate = f"{_col_letter(col_idx)}{row_idx + 1}"
                     results.append({
-                        "場所": f"{sheet_name}:R{cell.row}",
+                        "場所": f"{sheet_name}:{coordinate}",
                         "内容": cell_str,
                     })
-    wb.close()
     return results
 
 
@@ -193,11 +271,12 @@ EXCEL_EXTENSIONS = {".xlsx", ".xls"}
 WORD_EXTENSIONS = {".docx"}
 
 
-def search_file(filepath: str, keyword: str, ignore_case: bool) -> list[dict]:
+def search_file(filepath: str, keyword: str, ignore_case: bool,
+                sheet_pattern: str | None = None) -> list[dict]:
     """拡張子に応じて適切な検索関数を呼び出す。"""
     ext = os.path.splitext(filepath)[1].lower()
     if ext in EXCEL_EXTENSIONS:
-        return search_excel_file(filepath, keyword, ignore_case)
+        return search_excel_file(filepath, keyword, ignore_case, sheet_pattern)
     if ext in WORD_EXTENSIONS:
         return search_word_file(filepath, keyword, ignore_case)
     return search_text_file(filepath, keyword, ignore_case)
@@ -207,18 +286,33 @@ def search_file(filepath: str, keyword: str, ignore_case: bool) -> list[dict]:
 # 出力
 # ---------------------------------------------------------------------------
 
+def _display_width(text: str) -> int:
+    """全角文字を幅2、半角を幅1として表示幅を返す。"""
+    width = 0
+    for ch in text:
+        eaw = unicodedata.east_asian_width(ch)
+        width += 2 if eaw in ("W", "F") else 1
+    return width
+
+
+def _ljust_wide(text: str, width: int) -> str:
+    """全角文字を考慮して左詰めパディングした文字列を返す。"""
+    pad = width - _display_width(text)
+    return text + " " * max(pad, 0)
+
+
 def print_results(records: list[dict]) -> None:
     """コンソールに結果を出力する。"""
     if not records:
         return
-    # 列幅を揃えるため最大幅を計算
-    max_file = max(len(r["ファイル名"]) for r in records)
-    max_loc  = max(len(r["場所"])     for r in records)
-    header = f"{'ファイル名':<{max_file}}  {'場所':<{max_loc}}  内容"
+    # 全角文字を考慮した表示幅で列幅を計算
+    max_file = max(_display_width(r["ファイル名"]) for r in records)
+    max_loc  = max(_display_width(r["場所"])       for r in records)
+    header = f"{_ljust_wide('ファイル名', max_file)}  {_ljust_wide('場所', max_loc)}  内容"
     print(header)
     print("-" * min(len(header) + 20, 120))
     for r in records:
-        print(f"{r['ファイル名']:<{max_file}}  {r['場所']:<{max_loc}}  {r['内容']}")
+        print(f"{_ljust_wide(r['ファイル名'], max_file)}  {_ljust_wide(r['場所'], max_loc)}  {r['内容']}")
 
 
 def write_csv(records: list[dict], output_path: str, encoding: str = "cp932") -> None:
@@ -269,6 +363,8 @@ def main() -> None:
                         help="対象拡張子をカンマ区切りで指定（例: .xlsx,.csv）。省略時はデフォルト拡張子を使用")
     parser.add_argument("--filename", default="",
                         help="ファイル名フィルタ（ワイルドカード対応、例: IF*.xlsx）")
+    parser.add_argument("--sheet", default="",
+                        help="Excelのシート名フィルタ（ワイルドカード対応、例: 一覧*）。省略時は全シートを対象")
     parser.add_argument("--no-recursive", action="store_true",
                         help="サブフォルダを含めない")
     parser.add_argument("--ignore-case", action="store_true",
@@ -314,6 +410,7 @@ def main() -> None:
 
     recursive = not args.no_recursive
     filename_pattern = args.filename if args.filename else None
+    sheet_pattern = args.sheet if args.sheet else None
 
     # 出力先フォルダの決定（省略時: スクリプトと同じフォルダ）
     outdir = args.outdir if args.outdir else os.path.dirname(os.path.abspath(__file__))
@@ -329,6 +426,7 @@ def main() -> None:
     print(f"キーワード     : {args.keyword}")
     print(f"拡張子フィルタ : {sorted(extensions)}")
     print(f"ファイル名     : {filename_pattern if filename_pattern else '（指定なし）'}")
+    print(f"シート名       : {sheet_pattern if sheet_pattern else '（指定なし＝全シート）'}")
     print(f"サブフォルダ   : {'含めない' if not recursive else '含める'}")
     print(f"大文字小文字   : {'区別しない' if args.ignore_case else '区別する'}")
     print(f"出力先         : {output_path}")
@@ -346,7 +444,7 @@ def main() -> None:
     # 検索
     all_records: list[dict] = []
     for filepath in all_filepaths:
-        hits = search_file(filepath, args.keyword, args.ignore_case)
+        hits = search_file(filepath, args.keyword, args.ignore_case, sheet_pattern)
         dirpath = os.path.dirname(filepath)
         filename = os.path.basename(filepath)
         for hit in hits:
