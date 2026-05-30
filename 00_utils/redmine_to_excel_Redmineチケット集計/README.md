@@ -62,7 +62,35 @@ python redmine_to_excel.py ^
 
 `run_redmine_to_excel.bat` をコピーまたは編集して使います。
 
-公開リポジトリでは、実URL、実Excelパス、APIキーをコミットしないでください。
+このフォルダをGit管理しない前提で使う場合は、`run_redmine_to_excel.bat` の設定欄に APIキーを直接設定できます。
+
+```bat
+set "REDMINE_API_KEY=<your_redmine_api_key>"
+```
+
+Redmine の CSV URL に `&` や `?` が含まれる場合でも、バッチ内では `set "REDMINE_URL=..."` の形式を崩さず値だけ書き換えてください。
+URL に `%` が含まれる場合は bat の特殊文字として解釈されるため、`%2F` は `%%2F` のように `%` を2つにしてください。
+
+`%` を含むURLをそのまま貼り付けたい場合は、URLだけを書いたテキストファイルを作り、バッチの `REDMINE_URL_FILE` にそのファイルパスを設定してください。この場合、テキストファイル内の `%` は `%%` にしなくてかまいません。
+
+## Redmine URL の指定
+
+`REDMINE_URL` には、Redmine の画面表示用URLではなく、CSVを直接ダウンロードできるURLを指定してください。
+通常は `issues` ではなく `issues.csv` のURLを使います。
+
+```bat
+set "REDMINE_URL=https://redmine.example.com/issues.csv?query_id=123"
+```
+
+Redmine のチケット一覧画面で条件を整えたあと、CSVエクスポート用のURLを指定するのが基本です。
+運用を安定させる場合は、Redmine側でカスタムクエリを保存して `query_id=123` のようなURLにすると扱いやすくなります。
+
+```text
+OK: https://redmine.example.com/issues.csv?query_id=123
+NG: https://redmine.example.com/issues?query_id=123
+```
+
+`issues` だけのURLではHTML画面が返る場合があり、このツールではCSVとして正しく読み込めません。
 
 ## オプション
 
