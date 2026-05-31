@@ -21,3 +21,6 @@ Thumbs.db
 
 # Excel 一時ファイル
 ~$*
+
+# ローカル実行設定（実URL・認証情報を含む可能性あり）
+00_utils/redmine_to_excel_Redmineチケット集計/url/redmine_url.txt

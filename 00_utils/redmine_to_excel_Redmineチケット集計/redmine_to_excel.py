@@ -15,6 +15,35 @@ import sys
 from pathlib import Path
 from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 
+DEFAULT_ENCODINGS = ("utf-8-sig", "cp932", "shift_jis", "utf-8")
+URL_FILE_ENCODINGS = ("utf-8-sig", "cp932", "shift_jis", "utf-8")
+
+
+def read_text_with_encodings(path: Path, encodings: tuple[str, ...]) -> tuple[str, str]:
+    errors: list[str] = []
+    for encoding in encodings:
+        try:
+            return path.read_text(encoding=encoding), encoding
+        except UnicodeDecodeError as exc:
+            errors.append(f"{encoding}: {exc}")
+
+    tried = ", ".join(encodings)
+    detail = " / ".join(errors)
+    raise RuntimeError(f"Could not decode text file: {path}. Tried encodings: {tried}. Details: {detail}")
+
+
+def read_url_file(path: Path) -> tuple[str, str]:
+    if not path.is_file():
+        raise RuntimeError(f"URL file not found: {path}")
+
+    text, encoding = read_text_with_encodings(path, URL_FILE_ENCODINGS)
+    for line in text.splitlines():
+        url = line.strip()
+        if url:
+            return url, encoding
+
+    raise RuntimeError(f"URL file is empty: {path}")
+
 
 def build_url(url: str, api_key: str) -> str:
     if not api_key:
@@ -42,7 +71,7 @@ def fetch_csv(url: str, api_key: str, output_path: Path, timeout: int) -> None:
     output_path.write_bytes(response.content)
 
 
-def read_csv_rows(csv_path: Path, encoding: str, skip_header: bool) -> list[list[str]]:
+def read_csv_rows_with_encoding(csv_path: Path, encoding: str) -> list[list[str]]:
     with csv_path.open("r", newline="", encoding=encoding) as f:
         sample = f.read(4096)
         f.seek(0)
@@ -51,11 +80,27 @@ def read_csv_rows(csv_path: Path, encoding: str, skip_header: bool) -> list[list
         except csv.Error:
             dialect = csv.excel
 
-        rows = list(csv.reader(f, dialect))
+        return list(csv.reader(f, dialect))
+
+
+def read_csv_rows(csv_path: Path, encoding: str, skip_header: bool) -> tuple[list[list[str]], str]:
+    encodings = DEFAULT_ENCODINGS if encoding.lower() == "auto" else (encoding,)
+    errors: list[str] = []
+
+    for candidate in encodings:
+        try:
+            rows = read_csv_rows_with_encoding(csv_path, candidate)
+            break
+        except UnicodeDecodeError as exc:
+            errors.append(f"{candidate}: {exc}")
+    else:
+        tried = ", ".join(encodings)
+        detail = " / ".join(errors)
+        raise RuntimeError(f"Could not decode CSV. Tried encodings: {tried}. Details: {detail}")
 
     if skip_header and rows:
         rows = rows[1:]
-    return rows
+    return rows, candidate
 
 
 def normalize_for_excel(rows: list[list[str]]) -> tuple[tuple[str, ...], ...]:
@@ -124,7 +169,8 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description="Download Redmine issue CSV and paste values into an Excel workbook.",
     )
-    parser.add_argument("--url", required=True, help="Redmine CSV export URL.")
+    parser.add_argument("--url", default="", help="Redmine CSV export URL.")
+    parser.add_argument("--url-file", default="", help="Text file containing the Redmine CSV export URL.")
     parser.add_argument("--api-key", default="", help="Redmine API key. Prefer REDMINE_API_KEY for normal use.")
     parser.add_argument("--api-key-env", default="REDMINE_API_KEY", help="Environment variable name for API key.")
     parser.add_argument("--excel", required=True, help="Target Excel .xlsx path.")
@@ -133,7 +179,11 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--clear-range", default="", help="Optional range to clear before paste, such as A4:Y10000.")
     parser.add_argument("--skip-header", action="store_true", help="Skip the first row of the downloaded CSV.")
     parser.add_argument("--temp-csv", default="", help="Temporary CSV output path. Default: ./redmine_download.csv")
-    parser.add_argument("--encoding", default="utf-8-sig", help="Downloaded CSV encoding. Default: utf-8-sig")
+    parser.add_argument(
+        "--encoding",
+        default="auto",
+        help="Downloaded CSV encoding. Default: auto (utf-8-sig, cp932, shift_jis, utf-8).",
+    )
     parser.add_argument("--timeout", type=int, default=30, help="HTTP timeout seconds. Default: 30")
     parser.add_argument("--formula-source-row", type=int, default=0, help="Row containing formulas to fill down.")
     parser.add_argument("--formula-start-row", type=int, default=0, help="First row where formulas should be filled.")
@@ -145,16 +195,29 @@ def parse_args() -> argparse.Namespace:
 def main() -> None:
     args = parse_args()
     api_key = args.api_key or os.environ.get(args.api_key_env, "")
+    url = args.url.strip()
+    url_file_encoding = ""
+    try:
+        if args.url_file:
+            url, url_file_encoding = read_url_file(Path(args.url_file))
+    except Exception as exc:
+        print(f"[ERROR] {exc}", file=sys.stderr)
+        sys.exit(1)
+
     excel_path = Path(args.excel)
     temp_csv = Path(args.temp_csv) if args.temp_csv else Path(__file__).with_name("redmine_download.csv")
+
+    if not url:
+        print("[ERROR] Redmine CSV URL is required. Set --url or --url-file.", file=sys.stderr)
+        sys.exit(1)
 
     if not excel_path.is_file():
         print(f"[ERROR] Excel file not found: {excel_path}", file=sys.stderr)
         sys.exit(1)
 
     try:
-        fetch_csv(args.url, api_key, temp_csv, args.timeout)
-        rows = read_csv_rows(temp_csv, args.encoding, args.skip_header)
+        fetch_csv(url, api_key, temp_csv, args.timeout)
+        rows, detected_encoding = read_csv_rows(temp_csv, args.encoding, args.skip_header)
         pasted_rows = paste_values_to_excel(
             excel_path=excel_path,
             sheet_name=args.sheet,
@@ -171,6 +234,9 @@ def main() -> None:
         sys.exit(1)
 
     print(f"Downloaded CSV : {temp_csv}")
+    if url_file_encoding:
+        print(f"URL file enc.  : {url_file_encoding}")
+    print(f"CSV encoding   : {detected_encoding}")
     print(f"Excel file     : {excel_path}")
     print(f"Sheet          : {args.sheet}")
     print(f"Pasted rows    : {pasted_rows}")

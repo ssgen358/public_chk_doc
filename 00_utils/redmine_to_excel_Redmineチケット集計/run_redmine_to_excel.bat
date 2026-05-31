@@ -1,83 +1,80 @@
 @echo off
 setlocal
-chcp 65001 > nul
+chcp 932 > nul
 cd /d "%~dp0"
 
 rem ============================================================
-rem  Redmine CSV -> Excel å€¤è²¼ã‚Šä»˜ã‘ å®Ÿè¡Œãƒãƒƒãƒ
+rem  Redmine CSV -> Excel ’l“\‚è•t‚¯ ŽÀsƒoƒbƒ`
 rem ============================================================
 rem
-rem  è¨­å®šæ–¹æ³•:
-rem    1. ä¸‹ã®ã€Œè¨­å®šã“ã“ã‹ã‚‰ã€ä»¥é™ã‚’æ›¸ãæ›ãˆã¦å®Ÿè¡Œã—ã¦ãã ã•ã„ã€‚
-rem    2. URLã€Excelãƒ‘ã‚¹ã€APIã‚­ãƒ¼ã¯å®Ÿç’°å¢ƒã®å€¤ã‚’è¨­å®šã—ã¦ãã ã•ã„ã€‚
-rem    3. ã“ã®ãƒ•ã‚©ãƒ«ãƒ€ã‚’Gitç®¡ç†ã—ãªã„å‰æãªã‚‰ã€APIã‚­ãƒ¼ã‚‚ã“ã“ã«ç›´æŽ¥è¨­å®šã§ãã¾ã™ã€‚
+rem  ‚±‚Ìbatƒtƒ@ƒCƒ‹‚Í Shift-JIS/CP932 ‚Å•Û‘¶‚µ‚ÄŽg‚¤‘z’è‚Å‚·B
 rem
-rem  URLè¨­å®šæ™‚ã®æ³¨æ„:
-rem    - set "REDMINE_URL=..." ã®å½¢å¼ã¯å´©ã•ãšã€å€¤ã ã‘ã‚’æ›¸ãæ›ãˆã¦ãã ã•ã„ã€‚
-rem    - URLå†…ã® & ã‚„ ? ã¯ãã®ã¾ã¾æ›¸ã‘ã¾ã™ã€‚
-rem    - URLå†…ã® % ã¯ bat ã§ã¯ç‰¹æ®Šæ–‡å­—ã§ã™ã€‚%2F ã¯ %%2F ã®ã‚ˆã†ã« % ã‚’2ã¤ã«ã—ã¦ãã ã•ã„ã€‚
-rem      ä¾‹: ...?query_id=123&f%%5B%%5D=status_id
-rem    - % ã‚’å«ã‚€URLã‚’ãã®ã¾ã¾ä½¿ã„ãŸã„å ´åˆã¯ã€URLã ã‘ã‚’æ›¸ã„ãŸãƒ†ã‚­ã‚¹ãƒˆãƒ•ã‚¡ã‚¤ãƒ«ã‚’ä½œã‚Šã€
-rem      REDMINE_URL_FILE ã«ãã®ãƒ•ã‚¡ã‚¤ãƒ«ãƒ‘ã‚¹ã‚’è¨­å®šã—ã¦ãã ã•ã„ã€‚
+rem  Ý’è•û–@:
+rem    1. ‰º‚ÌuÝ’è‚±‚±‚©‚çvˆÈ~‚ð‘‚«Š·‚¦‚ÄŽÀs‚µ‚Ä‚­‚¾‚³‚¢B
+rem    2. URLAExcelƒpƒXAAPIƒL[‚ÍŽÀŠÂ‹«‚Ì’l‚ðÝ’è‚µ‚Ä‚­‚¾‚³‚¢B
+rem    3. ‚±‚ÌƒtƒHƒ‹ƒ_‚ðGitŠÇ—‚µ‚È‚¢‘O’ñ‚È‚çAAPIƒL[‚à‚±‚±‚É’¼ÚÝ’è‚Å‚«‚Ü‚·B
+rem    4. Redmine URL ‚Í url\redmine_url.txt ‚ÉURL‚¾‚¯‚ð‘‚¢‚ÄŽg‚¤‘z’è‚Å‚·B
 rem
-rem  ä¸»ãªè¨­å®šé …ç›®:
-rem    REDMINE_URL      Redmineã®CSVã‚¨ã‚¯ã‚¹ãƒãƒ¼ãƒˆURL
-rem    REDMINE_URL_FILE URLã ã‘ã‚’æ›¸ã„ãŸãƒ†ã‚­ã‚¹ãƒˆãƒ•ã‚¡ã‚¤ãƒ«ã€‚è¨­å®šæ™‚ã¯REDMINE_URLã‚ˆã‚Šå„ªå…ˆã€‚
-rem    REDMINE_API_KEY  Redmine APIã‚­ãƒ¼ã€‚URLã« key= ãŒãªã„å ´åˆã ã‘è‡ªå‹•ä»˜ä¸Žã•ã‚Œã¾ã™ã€‚
-rem    EXCEL_PATH       è²¼ã‚Šä»˜ã‘å…ˆExcelãƒ•ã‚¡ã‚¤ãƒ«
-rem    SHEET_NAME       è²¼ã‚Šä»˜ã‘å…ˆã‚·ãƒ¼ãƒˆå
-rem    CLEAR_RANGE      è²¼ã‚Šä»˜ã‘å‰ã«å€¤ã‚’æ¶ˆã™ç¯„å›²ã€‚ä¸è¦ãªã‚‰ç©ºæ¬„ã€‚
-rem    PASTE_CELL       CSVå€¤ã®è²¼ã‚Šä»˜ã‘é–‹å§‹ã‚»ãƒ«
-rem    SKIP_HEADER      CSVã®1è¡Œç›®ã‚’è²¼ã‚Šä»˜ã‘ãªã„å ´åˆã¯ --skip-headerã€‚è²¼ã‚‹å ´åˆã¯ç©ºæ¬„ã€‚
-rem    TEMP_CSV         ãƒ€ã‚¦ãƒ³ãƒ­ãƒ¼ãƒ‰ã—ãŸCSVã®ä¸€æ™‚ä¿å­˜å…ˆ
-rem    FORMULA_*        æ•°å¼åˆ—ã‚’æœ€çµ‚è¡Œã¾ã§FillDownã™ã‚‹è¨­å®šã€‚ä¸è¦ãªã‚‰3é …ç›®ã¨ã‚‚ç©ºæ¬„ã€‚
+rem  URLÝ’èŽž‚Ì’ˆÓ:
+rem    - REDMINE_URL_FILE ‚ÉŽw’è‚µ‚½ƒeƒLƒXƒgƒtƒ@ƒCƒ‹‚ðPython‘¤‚Å“Ç‚Ýž‚Ý‚Ü‚·B
+rem    - URLƒtƒ@ƒCƒ‹‚É‚ÍURL‚¾‚¯‚ð‘‚¢‚Ä‚­‚¾‚³‚¢BƒRƒƒ“ƒgs‚Í‘‚©‚È‚¢‚Å‚­‚¾‚³‚¢B
+rem    - URLƒtƒ@ƒCƒ‹‚ðŽg‚¤ê‡AURL“à‚Ì & ‚â ? ‚â % ‚Í‚»‚Ì‚Ü‚Ü‘‚¯‚Ü‚·B
+rem    - REDMINE_URL ‚É’¼ÚURL‚ð‘‚­ê‡‚¾‚¯A%2F ‚Í %%2F ‚Ì‚æ‚¤‚É % ‚ð2‚Â‚É‚µ‚Ä‚­‚¾‚³‚¢B
+rem
+rem  Žå‚ÈÝ’è€–Ú:
+rem    REDMINE_URL      Redmine‚ÌCSVƒGƒNƒXƒ|[ƒgURLBREDMINE_URL_FILE–¢Ý’èŽž‚¾‚¯Žg—pB
+rem    REDMINE_URL_FILE URL‚¾‚¯‚ð‘‚¢‚½ƒeƒLƒXƒgƒtƒ@ƒCƒ‹B’Êí‚Í‚±‚¿‚ç‚ðŽg—pB
+rem    REDMINE_API_KEY  Redmine APIƒL[BURL‚É key= ‚ª‚È‚¢ê‡‚¾‚¯Ž©“®•t—^‚³‚ê‚Ü‚·B
+rem    EXCEL_PATH       “\‚è•t‚¯æExcelƒtƒ@ƒCƒ‹
+rem    SHEET_NAME       “\‚è•t‚¯æƒV[ƒg–¼
+rem    CLEAR_RANGE      “\‚è•t‚¯‘O‚É’l‚ðÁ‚·”ÍˆÍB•s—v‚È‚ç‹ó—“B
+rem    PASTE_CELL       CSV’l‚Ì“\‚è•t‚¯ŠJŽnƒZƒ‹
+rem    SKIP_HEADER      CSV‚Ì1s–Ú‚ð“\‚è•t‚¯‚È‚¢ê‡‚Í --skip-headerB“\‚éê‡‚Í‹ó—“B
+rem    TEMP_CSV         ƒ_ƒEƒ“ƒ[ƒh‚µ‚½CSV‚ÌˆêŽž•Û‘¶æ
+rem    ENCODING         CSV•¶ŽšƒR[ƒhB’Êí‚Í autoB•¶Žš‰»‚¯Žž‚Í cp932 ‚È‚Ç‚ðŽw’èB
+rem    FORMULA_*        ”Ž®—ñ‚ðÅIs‚Ü‚ÅFillDown‚·‚éÝ’èB•s—v‚È‚ç3€–Ú‚Æ‚à‹ó—“B
 rem
 rem ============================================================
-rem  è¨­å®šã“ã“ã‹ã‚‰
+rem  Ý’è‚±‚±‚©‚ç
 rem ============================================================
 
-set "REDMINE_URL=https://redmine.example.com/issues.csv?query_id=123"
-set "REDMINE_URL_FILE="
+set "REDMINE_URL="
+set "REDMINE_URL_FILE=%~dp0url\redmine_url.txt"
 set "REDMINE_API_KEY="
 
 set "EXCEL_PATH=C:\work\redmine_summary.xlsx"
-set "SHEET_NAME=ãƒã‚±ãƒƒãƒˆä¸€è¦§"
+set "SHEET_NAME=ƒ`ƒPƒbƒgˆê——"
 
 set "CLEAR_RANGE=A4:Y10000"
 set "PASTE_CELL=A4"
 set "SKIP_HEADER=--skip-header"
 
 set "TEMP_CSV=%TEMP%\redmine_download.csv"
+set "ENCODING=auto"
 
 set "FORMULA_SOURCE_ROW=5"
 set "FORMULA_START_ROW=6"
 set "FORMULA_COLS=Z,AA"
 
 rem ============================================================
-rem  è¨­å®šã“ã“ã¾ã§
+rem  Ý’è‚±‚±‚Ü‚Å
 rem ============================================================
-
-if not "%REDMINE_URL_FILE%"=="" (
-    if not exist "%REDMINE_URL_FILE%" (
-        echo URLãƒ•ã‚¡ã‚¤ãƒ«ãŒè¦‹ã¤ã‹ã‚Šã¾ã›ã‚“: %REDMINE_URL_FILE%
-        goto error
-    )
-    set /p REDMINE_URL=<"%REDMINE_URL_FILE%"
-)
 
 if "%FORMULA_SOURCE_ROW%"=="" set "FORMULA_SOURCE_ROW=0"
 if "%FORMULA_START_ROW%"=="" set "FORMULA_START_ROW=0"
 
-echo å®Ÿè¡Œã‚³ãƒžãƒ³ãƒ‰:
-echo python "%~dp0redmine_to_excel.py" --url "[REDMINE_URL]" --excel "%EXCEL_PATH%" --sheet "%SHEET_NAME%"
+echo ŽÀsƒRƒ}ƒ“ƒh:
+echo python "%~dp0redmine_to_excel.py" --url "[REDMINE_URL]" --url-file "[REDMINE_URL_FILE]" --excel "%EXCEL_PATH%" --sheet "%SHEET_NAME%"
 echo.
 python "%~dp0redmine_to_excel.py" ^
   --url "%REDMINE_URL%" ^
+  --url-file "%REDMINE_URL_FILE%" ^
   --excel "%EXCEL_PATH%" ^
   --sheet "%SHEET_NAME%" ^
   --clear-range "%CLEAR_RANGE%" ^
   --paste-cell "%PASTE_CELL%" ^
   --temp-csv "%TEMP_CSV%" ^
+  --encoding "%ENCODING%" ^
   %SKIP_HEADER% ^
   --formula-source-row %FORMULA_SOURCE_ROW% ^
   --formula-start-row %FORMULA_START_ROW% ^
@@ -85,12 +82,12 @@ python "%~dp0redmine_to_excel.py" ^
 IF ERRORLEVEL 1 goto error
 
 echo.
-echo å®Œäº†ã—ã¾ã—ãŸã€‚
+echo Š®—¹‚µ‚Ü‚µ‚½B
 pause
 exit /b 0
 
 :error
 echo.
-echo ã‚¨ãƒ©ãƒ¼ãŒç™ºç”Ÿã—ã¾ã—ãŸã€‚ä¸Šã®ãƒ¡ãƒƒã‚»ãƒ¼ã‚¸ã‚’ç¢ºèªã—ã¦ãã ã•ã„ã€‚
+echo ƒGƒ‰[‚ª”­¶‚µ‚Ü‚µ‚½Bã‚ÌƒƒbƒZ[ƒW‚ðŠm”F‚µ‚Ä‚­‚¾‚³‚¢B
 pause
 exit /b 1

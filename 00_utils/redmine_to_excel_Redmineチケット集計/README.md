@@ -61,6 +61,7 @@ python redmine_to_excel.py ^
 ## バッチで使う
 
 `run_redmine_to_excel.bat` をコピーまたは編集して使います。
+このバッチファイルは Windows の `cmd.exe` で実行する前提のため、Shift-JIS/CP932 で保存して使う想定です。
 
 このフォルダをGit管理しない前提で使う場合は、`run_redmine_to_excel.bat` の設定欄に APIキーを直接設定できます。
 
@@ -68,10 +69,28 @@ python redmine_to_excel.py ^
 set "REDMINE_API_KEY=<your_redmine_api_key>"
 ```
 
-Redmine の CSV URL に `&` や `?` が含まれる場合でも、バッチ内では `set "REDMINE_URL=..."` の形式を崩さず値だけ書き換えてください。
-URL に `%` が含まれる場合は bat の特殊文字として解釈されるため、`%2F` は `%%2F` のように `%` を2つにしてください。
+Redmine の CSV URL は、バッチ内に直接書くより、URLファイルに書いて `REDMINE_URL_FILE` から読み込む使い方を推奨します。
+URLファイル置き場として `url/` を用意しています。
+`url/redmine_url.example.txt` を参考に、ローカル用の `url/redmine_url.txt` を作成してください。
+`url/redmine_url.txt` は実URLを含む可能性があるため、Git管理対象外にしています。
 
-`%` を含むURLをそのまま貼り付けたい場合は、URLだけを書いたテキストファイルを作り、バッチの `REDMINE_URL_FILE` にそのファイルパスを設定してください。この場合、テキストファイル内の `%` は `%%` にしなくてかまいません。
+```bat
+set "REDMINE_URL_FILE=%~dp0url\redmine_url.txt"
+```
+
+URLファイルには、URLだけを1行で書いてください。
+コメント行や説明文は書かないでください。
+
+```text
+https://redmine.example.com/issues.csv?query_id=123
+```
+
+URLファイルを使う場合、URL内の `&`、`?`、`%` はそのまま書けます。
+URLファイルは `utf-8-sig`、`cp932`、`shift_jis`、`utf-8` の順に読み込みを試すため、UTF-8 BOM付きやShift-JIS/CP932でも利用できます。
+Windowsのメモ帳やbat運用に合わせるなら Shift-JIS/CP932 で保存しておくと扱いやすいです。
+
+バッチ内の `REDMINE_URL` に直接URLを書く場合だけ、`%` がbatの特殊文字として解釈されます。
+その場合は `%2F` を `%%2F` のように `%` を2つにしてください。
 
 ## Redmine URL の指定
 
@@ -97,6 +116,7 @@ NG: https://redmine.example.com/issues?query_id=123
 | オプション | 説明 |
 | --- | --- |
 | `--url` | Redmine CSV エクスポート URL |
+| `--url-file` | Redmine CSV エクスポート URL を記載したテキストファイル |
 | `--api-key` | Redmine API キー。通常は使わず環境変数を推奨 |
 | `--api-key-env` | APIキーを読む環境変数名。デフォルトは `REDMINE_API_KEY` |
 | `--excel` | 貼り付け先 Excel ファイル |
@@ -105,7 +125,7 @@ NG: https://redmine.example.com/issues?query_id=123
 | `--clear-range` | 貼り付け前に値を消す範囲 |
 | `--skip-header` | CSV の1行目を貼り付けない |
 | `--temp-csv` | ダウンロードCSVの保存先 |
-| `--encoding` | CSV文字コード。デフォルトは `utf-8-sig` |
+| `--encoding` | CSV文字コード。デフォルトは `auto` |
 | `--formula-source-row` | 数式コピー元の行 |
 | `--formula-start-row` | 数式コピー開始行 |
 | `--formula-cols` | 数式をコピーする列。例: `Z,AA` |
@@ -116,3 +136,20 @@ NG: https://redmine.example.com/issues?query_id=123
 - Excel ファイルを開いたままだと保存に失敗する場合があります。
 - CSV の値は文字列として読み込み、Excelへ値として貼り付けます。
 - Excel 側の表示形式を使いたい列は、貼り付け先シート側で事前に書式設定してください。
+
+## 文字コードエラーが出る場合
+
+`utf-8 codec can't decode byte 0x83...` のようなエラーが出る場合、Redmine から取得したCSVが UTF-8 ではなく Shift-JIS/CP932 系で出力されている可能性があります。
+
+通常は `--encoding auto` のままで、`utf-8-sig`、`cp932`、`shift_jis`、`utf-8` の順に自動判定します。
+バッチでは以下の設定を使います。
+
+```bat
+set "ENCODING=auto"
+```
+
+自動判定でうまくいかない場合は、Windows向けの日本語CSVとして `cp932` を明示してください。
+
+```bat
+set "ENCODING=cp932"
+```
